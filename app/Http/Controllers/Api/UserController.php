@@ -8,9 +8,16 @@ use App\Models\Report;
 use App\Models\Credential;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Services\GlideTransactionService;
 
 class UserController extends Controller
 {
+    protected $service;
+
+    public function __construct(GlideTransactionService $service)
+    {
+        $this->service = $service;
+    }
     
 public function getMerchants(Request $request)
 {
@@ -579,10 +586,10 @@ if ($request->has('director_info')) {
     
             // Deduct amount
             $newBalance = $currentBalance - $deductAmount;
-    
+            
             // Update user wallet
             $user->update([
-                'payin_wallet' => number_format($newBalance, 2, '.', ''),
+                'payin_wallet' => $this->service->numberFormat($newBalance),
             ]);
     
             // Generate unique reference number
@@ -658,10 +665,10 @@ if ($request->has('director_info')) {
     
             // Deduct amount
             $newBalance = $currentBalance + $addedAmount;
-    
+            
             // Update user wallet
             $user->update([
-                'payout_wallet' => number_format($newBalance, 2, '.', ''),
+                'payout_wallet' => $this->service->numberFormat($newBalance),
             ]);
     
             // Generate unique reference number
@@ -740,7 +747,7 @@ if ($request->has('director_info')) {
     
             // Update user wallet
             $user->update([
-                'payout_wallet' => number_format($newBalance, 2, '.', ''),
+                'payout_wallet' => $this->service->numberFormat($newBalance),
             ]);
     
             // Generate unique reference number

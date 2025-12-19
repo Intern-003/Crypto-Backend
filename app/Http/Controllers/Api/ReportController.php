@@ -195,23 +195,45 @@ class ReportController extends Controller
                 ->where('status', 'success')
                 ->where('product', 'CRYPTO')
                 ->sum('amount');
+            
+            $total_payin_count = (clone $baseQuery)
+                ->where('status', 'success')
+                ->where('product', 'CRYPTO')
+                ->count(); // count of total PayIn transactions
     
             $total_payout_amount = (clone $baseQuery)
                 ->where('status', 'success')
                 ->where('product', 'payout')
                 ->sum('amount');
+            
+            $total_payout_count = (clone $baseQuery)
+                ->where('status', 'success')
+                ->where('product', 'payout')
+                ->count(); // count of total Payout transactions
     
             $today_payin  = (clone $baseQuery)
                 ->where('status', 'success')
                 ->where('product', 'CRYPTO')
                 ->whereBetween('created_at', [$todayStart, $todayEnd])
                 ->sum('amount');
+
+            $today_payin_count = (clone $baseQuery)
+                ->where('status', 'success')
+                ->where('product', 'CRYPTO')
+                ->whereBetween('created_at', [$todayStart, $todayEnd])
+                ->count(); // count of today's PayIn
     
             $today_payout = (clone $baseQuery)
                 ->where('status', 'success')
                 ->where('product', 'payout')
                 ->whereBetween('created_at', [$todayStart, $todayEnd])
                 ->sum('amount');
+
+            $today_payout_count = (clone $baseQuery)
+                ->where('status', 'success')
+                ->where('product', 'payout')
+                ->whereBetween('created_at', [$todayStart, $todayEnd])
+                ->count(); // count of today's Payout
     
             // -------------------------------
             // Payin summary
@@ -313,6 +335,10 @@ class ReportController extends Controller
                 'total_payout_amount'        => $total_payout_amount ?? 0,
                 'today_payin'                => $today_payin ?? 0,
                 'today_payout'               => $today_payout ?? 0,
+                'total_payin_count'          => $total_payin_count ?? 0,
+                'total_payout_count'         => $total_payout_count ?? 0,
+                'today_payin_count'          => $today_payin_count ?? 0,
+                'today_payout_count'         => $today_payout_count ?? 0,
                 'payout_wallet'              => $user->payout_wallet ?? 0,
                 'PayinRollingAmount_current' => $PayinRollingAmount_current ?? 0,
                 'PayingAmount_current'       => $PayingAmount_current ?? 0,

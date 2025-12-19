@@ -42,6 +42,9 @@ class GlideTransactionService
         // dd($this->decryptEncryptedToken($metaToken["encrypted"]));
     }
 
+    public function numberFormat($amount) {
+        return number_format($amount, 20, '.', '');
+    }
     
     public function processMetaData($action, $data)
     {
