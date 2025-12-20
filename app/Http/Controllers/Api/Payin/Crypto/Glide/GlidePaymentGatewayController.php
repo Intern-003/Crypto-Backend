@@ -42,7 +42,7 @@ class GlidePaymentGatewayController extends Controller
         $metaToken = $metaTokenHash["encrypted"];
         //$metaToken = $metaTokenHash;
 
-        Log::info('Glide Widget Request', [
+        Log::info('Glide Widget Request - PayIn', [
             'mode' => 'pay',
             'amount' =>  $params["amount"],
             'metadata' => $metaToken,

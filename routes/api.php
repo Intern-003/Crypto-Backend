@@ -39,6 +39,7 @@ use App\Http\Controllers\Api\Payout\CashfreepayoutController;
 
 //PayIn/PayOut Glide Crypto
 use App\Http\Controllers\Api\Payin\Crypto\Glide\GlidePaymentGatewayController;
+use App\Http\Controllers\Api\Payout\Crypto\Glide\GlidePayOutController;
 use App\Http\Controllers\Api\Callback\PayinCallback\Crypto\GlideWebhookController;
 
 
@@ -206,6 +207,8 @@ Route::group(['prefix' => 'GLIDE'], function(){
     Route::post('/webhook/transaction', [GlideWebhookController::class, 'handleGlideWebhook']);
     //Route::get('/webhook/view-all-transactions', [GlideWebhookController::class, 'listAllTransactions']);
     
+    //Payout
+    Route::post('/create-glide-payout-widget', [GlidePayOutController::class, 'generateGlidePgWidgetUrl']);
 });
 
 
