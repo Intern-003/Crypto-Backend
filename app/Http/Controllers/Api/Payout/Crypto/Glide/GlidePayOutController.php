@@ -107,15 +107,7 @@ class GlidePayOutController extends Controller
         //Convert Paying amount from INR to USD
         $convertedAmount = $this->numberFormat($this->convertAmount('INR', 'USD', $request->amount));
         // Validate incoming request
-        $rules = [
-            'token'        => 'required',
-            'orderid'      => 'required|alpha_num|min:8|max:20|unique:reports,mytxnid',
-            'buyer_email'  => 'required|email',
-            'buyer_phone'  => 'required|digits_between:10,15',
-            'amount'       => 'required|numeric|min:0',
-            'buyer_wallet' => 'required|alpha_num',
-        ];
-
+       
         $createWidgetPayload = [
             'orderid'   => $request->orderid,
             'amount'    => $convertedAmount,//$request->amount,
@@ -126,7 +118,16 @@ class GlidePayOutController extends Controller
         
         // Generate widget session ID 
         $sessionData = $this->service->createPaymentSession($createWidgetPayload);
-
+        // Extract only required fields
+        if(!$sessionData || $sessionData === null) {
+            return response()->json([
+                'status'     => 'failed',
+                'statuscode' => 500,
+                'message'    => 'Cannot generate Payment Session'
+            ], 500);
+        } else {
+            
+        }
 
     }
 
