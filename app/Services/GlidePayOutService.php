@@ -15,7 +15,7 @@ class GlidePayOutService
 
     public function __construct(GlideTransactionService $glideTransaction)
     {
-        $this->$tractionService = $glideTransaction;
+        $this->tractionService = $glideTransaction;
         $this->apiKey = env('GLIDE_API_KEY');
         $this->projectId = env('GLIDE_PROJECT_ID');
         $this->baseUrl = env('GLIDE_API_CREATEPAYMENTSESSION_URL', 'https://api.paywithglide.xyz/widget/payment-sessions');
@@ -44,7 +44,7 @@ class GlidePayOutService
         ];
 
         // Optional: encrypt metadata if you have a service
-        $metaTokenHash = $this->$tractionService->processMetaData('encrypt', $metadata);
+        $metaTokenHash = $this->tractionService->processMetaData('encrypt', $metadata);
         $metaToken = $metaTokenHash["encrypted"];
 
         Log::info('Glide Payment Session Widget Request - PayOut', [
@@ -59,56 +59,52 @@ class GlidePayOutService
         //$settleCurrency = $this->fetchCurrencies('settle');
 
         try {
-            $response = Http::withHeaders([
+            $url = env('GLIDE_API_NODE_APP_LOCAL_URL');
+            $payload = [
+                'recipientWallet' => $params["buyer_wallet"],
+                'paymentAmount'   => $params["amount"],
+                'metadata'        => $metaToken
+            ];
+            $headers = [
                 'Authorization' => 'Bearer ' . $this->apiKey,
                 'X-Glide-Project-ID' => $this->projectId,
                 'Content-Type' => 'application/json',
-            ])->post(env('GLIDE_API_NODE_APP_LOCAL_URL'), [
-                'recipientWallet' => $params["buyer_wallet"],
-                'paymentAmount'   => $params["amount"],
-                //'paymentCurrency' => $paymentCurrency,
-                //'settleCurrency'  => $settleCurrency,
-                //'payerAccount'    => env('GLIDE_PAYER_ACCOUNT'),   
-                //'walletSecret'    => env('GLIDE_WALLET_SECRET'),   
-                'metadata'        => $metaToken
-            ]);
+            ];
+            $response = Http::withHeaders($headers)->post($url, $payload);
 
             if ($response->successful()) {
-                try {
-                    
-
-                    Log::info('Glide Payment Session Widget Request - PayOut', [
-                        'glide_request' => json_encode([
-                            'orderid'   => $params["amount"],
-                            'user_id'   => $params["user_id"],
-                            'token'     => $params["token"],
-                            'amount'    => $params["amount"],
-                            'metadata'  => $metaToken
-                        ]),
-                        'glide_response' => $response->body(),
-                    ]);
-
-                    // return response()->json([
-                        
-                    // ], 200); // return session data
-
-                    return $response->json(); // return session data
-
-                } catch (\Exception $e) {
-                    return response()->json([
-                        'status' => 'error',
-                        'message' => 'Store Session Request failed: ' . $e->getMessage()
-                    ], 500);
-                }
+                Log::info('Glide Payment Session Widget Request - PayOut', [
+                    'glide_request' => json_encode([
+                        'orderid'   => $params["amount"],
+                        'user_id'   => $params["user_id"],
+                        'token'     => $params["token"],
+                        'amount'    => $params["amount"],
+                        'metadata'  => $metaToken
+                    ]),
+                    'glide_response' => $response->body(),
+                ]);
+                return $response->json(); // return session data
+            } else {
+                Log::error('Glide Payment Session Error');
+                return [
+                    'error' => true,
+                    'message' => 'Glide Payment Session Widget Request 101',
+                    'error_reason' => [
+                        'http_status' => $response->status(),
+                        'url'         => $url,
+                        'headers'     => $headers,
+                        'payload'     => $payload,
+                        'response'    => $response->body()
+                    ]
+                ];
+                
             }
-
-            return null;
 
         } catch (\Exception $e) {
             Log::error('Glide Payment Session Error', ['message' => $e->getMessage()]);
             return [
                 'error' => true,
-                'message' => $e->getMessage()
+                'message' => 'Glide Payment Session Widget Request 102' . $e->getMessage()
             ];
         }
     }

@@ -118,6 +118,17 @@ class GlidePayOutController extends Controller
         
         // Generate widget session ID 
         $sessionData = $this->service->createPaymentSession($createWidgetPayload);
+
+        // 1️⃣ Hard fail if nothing returned
+        if (empty($sessionData) || !is_array($sessionData)) {
+            return response()->json([
+                'status'     => 'failed',
+                'statuscode' => 500,
+                'message'    => 'Cannot generate Payment Session',
+            ], 500);
+        }
+
+        //dd($sessionData);
         // Extract only required fields
         if(!$sessionData || $sessionData === null) {
             return response()->json([
@@ -126,16 +137,18 @@ class GlidePayOutController extends Controller
                 'message'    => 'Cannot generate Payment Session'
             ], 500);
         } else {
-            if(!isset($sessionData['sessionId'])) {
+            // 2️⃣ Validate required fields from Node API
+            if (!array_key_exists('sessionId', $sessionData)) {
                 return response()->json([
                     'status'     => 'failed',
-                    'statuscode' => 500,
-                    'message'    => 'API did not return Session Id',
-                ], 500); 
+                    'statuscode' => 502, // Bad gateway (upstream error)
+                    'message'    => 'API did not return Session ID',
+                    'api_response' => $sessionData
+                ], 502);
             }
-
-            // Access returned fields
-            $sessionId = $sessionData['sessionId'] ?? null;
+            
+            // 3️⃣ Extract required fields safely
+            $sessionId = $sessionData['sessionId'];
             $shortMeta = $this->service->getShortMeta($sessionData['metadata'] ?? []);
             $txHashId  = $sessionData['sponsoredTransactionHash'] ?? null;
 
@@ -183,6 +196,42 @@ class GlidePayOutController extends Controller
             ], 200);
         }
 
+    }
+
+    public function numberFormat($amount) {
+        return number_format($amount, 20, '.', '');
+    }
+
+    public function convertAmount(string $from, string $to, ?float $amount = null)
+    {
+        $url = "https://free.ratesdb.com/v1/rates";
+
+        try {
+            $response = Http::get($url, [
+                'from' => strtoupper($from),
+                'to'   => strtoupper($to),
+            ]);
+
+            if (!$response->successful()) {
+                return null;
+            }
+
+            $data = $response->json();
+
+            // Check if rate exists in 'rates' array
+            $rate = $data['data']['rates'][strtoupper($to)] ?? null;
+
+            if ($rate === null) {
+                return null; // rate not available
+            }
+
+            // Convert amount if provided
+            return $amount !== null ? $amount * $rate : $rate;
+
+        } catch (\Exception $e) {
+            \Log::error("Currency conversion error: " . $e->getMessage());
+            return null;
+        }
     }
 
     public function setCommercial($request, $apiToken)
