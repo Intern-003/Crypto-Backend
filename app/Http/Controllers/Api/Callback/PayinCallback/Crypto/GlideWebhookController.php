@@ -48,18 +48,18 @@ class GlideWebhookController extends Controller
     //public function handleGlideWebhook(StoreGlideWebhookRequest $request)
     public function handleGlideWebhook(Request $request)
     {
-        // $this->payinLog('Glide Callback Received', [
-        //     'request_array' => $request->all(),
-        //     'raw_content' => $request->getContent()
-        // ]);
+        $this->payinLog('Glide Callback Received', [
+            'request_array' => $request->all(),
+            'raw_content' => $request->getContent()
+        ]);
         
-        // // Store raw request for debugging
-        // DB::table('micro_logs')->insert([
-        //     'product_response' => json_encode($request->all()),
-        //     'product_name' => 'Glide',
-        //     'created_at' => now(),
-        //     'updated_at' => now(),
-        // ]);
+        // Store raw request for debugging
+        DB::table('micro_logs')->insert([
+            'product_response' => json_encode($request->all()),
+            'product_name' => 'Glide',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
         
         $data = json_decode($request->getContent(), true);
         

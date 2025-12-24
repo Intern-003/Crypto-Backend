@@ -55,21 +55,21 @@ class GlidePayOutService
             'metadata'  => $metaToken,
         ]);
 
-        $paymentCurrency = $this->fetchCurrencies('payment');
-        $settleCurrency = $this->fetchCurrencies('settle');
+        //$paymentCurrency = $this->fetchCurrencies('payment');
+        //$settleCurrency = $this->fetchCurrencies('settle');
 
         try {
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer ' . $this->apiKey,
                 'X-Glide-Project-ID' => $this->projectId,
                 'Content-Type' => 'application/json',
-            ])->post(env('GLIDE_API_CREATEPAYMENTSESSION_URL'), [
+            ])->post(env('GLIDE_API_NODE_APP_LOCAL_URL'), [
                 'recipientWallet' => $params["buyer_wallet"],
                 'paymentAmount'   => $params["amount"],
-                'paymentCurrency' => $paymentCurrency,
-                'settleCurrency'  => $settleCurrency,
-                'payerAccount'    => env('GLIDE_PAYER_ACCOUNT'),   
-                'walletSecret'    => env('GLIDE_WALLET_SECRET'),   
+                //'paymentCurrency' => $paymentCurrency,
+                //'settleCurrency'  => $settleCurrency,
+                //'payerAccount'    => env('GLIDE_PAYER_ACCOUNT'),   
+                //'walletSecret'    => env('GLIDE_WALLET_SECRET'),   
                 'metadata'        => $metaToken
             ]);
 
@@ -88,9 +88,11 @@ class GlidePayOutService
                         'glide_response' => $response->body(),
                     ]);
 
-                    return response()->json([
+                    // return response()->json([
                         
-                    ], 200); // return session data
+                    // ], 200); // return session data
+
+                    return $response->json(); // return session data
 
                 } catch (\Exception $e) {
                     return response()->json([
@@ -109,6 +111,13 @@ class GlidePayOutService
                 'message' => $e->getMessage()
             ];
         }
+    }
+
+     public function getShortMeta($hash)
+    {
+        $hashStr = base_convert(substr(hash('sha256', $hash), 0, 30), 16, 36);
+        
+        return substr($hashStr, 0, 40);
     }
 
     /**

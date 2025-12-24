@@ -38,7 +38,7 @@ use App\Http\Controllers\Api\Payout\CommanPayoutController;
 use App\Http\Controllers\Api\Payout\CashfreepayoutController;
 
 //PayIn/PayOut Glide Crypto
-use App\Http\Controllers\Api\Payin\Crypto\Glide\GlidePaymentGatewayController;
+use App\Http\Controllers\Api\Payin\Crypto\Glide\GlidePayInController;
 use App\Http\Controllers\Api\Payout\Crypto\Glide\GlidePayOutController;
 use App\Http\Controllers\Api\Callback\PayinCallback\Crypto\GlideWebhookController;
 
@@ -198,12 +198,12 @@ Route::group(['prefix' => 'ph/payin'], function(){
 
 //Glide CryptoPayment Integration
 Route::group(['prefix' => 'GLIDE'], function(){
-    Route::post('/create-glide-widget-url', [GlidePaymentGatewayController::class, 'generateGlidePgWidgetUrl']);
-    Route::post('/review-glide-widget-payments', [GlidePaymentGatewayController::class, 'reviewGlideWidgetPayments']);
-    Route::post('/payment-success', [GlidePaymentGatewayController::class, 'successGlideWidgetPayments']);
-    Route::post('/payment-error', [GlidePaymentGatewayController::class, 'errorGlideWidgetPayments']);
-    Route::post('/payment-cancel', [GlidePaymentGatewayController::class, 'cancelGlideWidgetPayments']);
-    Route::post('/generate-random-ids', [GlidePaymentGatewayController::class, 'generateRandomIds']);
+    Route::post('/create-glide-widget-url', [GlidePayInController::class, 'generateGlidePgWidgetUrl']);
+    Route::post('/review-glide-widget-payments', [GlidePayInController::class, 'reviewGlideWidgetPayments']);
+    Route::post('/payment-success', [GlidePayInController::class, 'successGlideWidgetPayments']);
+    Route::post('/payment-error', [GlidePayInController::class, 'errorGlideWidgetPayments']);
+    Route::post('/payment-cancel', [GlidePayInController::class, 'cancelGlideWidgetPayments']);
+    Route::post('/generate-random-ids', [GlidePayInController::class, 'generateRandomIds']);
     Route::post('/webhook/transaction', [GlideWebhookController::class, 'handleGlideWebhook']);
     //Route::get('/webhook/view-all-transactions', [GlideWebhookController::class, 'listAllTransactions']);
     

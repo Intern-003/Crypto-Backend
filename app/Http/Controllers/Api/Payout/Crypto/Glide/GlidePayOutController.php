@@ -126,7 +126,61 @@ class GlidePayOutController extends Controller
                 'message'    => 'Cannot generate Payment Session'
             ], 500);
         } else {
+            if(!isset($sessionData['sessionId'])) {
+                return response()->json([
+                    'status'     => 'failed',
+                    'statuscode' => 500,
+                    'message'    => 'API did not return Session Id',
+                ], 500); 
+            }
+
+            // Access returned fields
+            $sessionId = $sessionData['sessionId'] ?? null;
+            $shortMeta = $this->service->getShortMeta($sessionData['metadata'] ?? []);
+            $txHashId  = $sessionData['sponsoredTransactionHash'] ?? null;
+
+            if (!$sessionId) {
+                Log::warning('sessionId missing in Glide response', ['response' => $request->getContent()]);
+                return response()->json(['status' => false, 'message' => 'Session ID missing']);
+            }
+            if (!$txHashId || $txHashId === null) {
+                Log::warning('transactionId missing in Glide response', ['response' => $request->getContent()]);
+                return response()->json(['status' => false, 'message' => 'Transaction ID missing']);
+            }
+
+            $filteredData = [
+                'session_id'    => $sessionId,
+                'orderid'       => $request->orderid ?? null,
+                'txnid'         => $report->txnid,
+                'metadata'      => $sessionData['metadata'],
+                'short-metadata' => $shortMeta
+            ];
+
+            // Prepare report update
+            $updateOrder = [
+                'glide_uiwidget_sessionid' => $sessionId ?? null,
+                'apitxnid' => $shortMeta ?? null, 
+                'option2' => null,
+                'option3' => $txHashId ?? null,
+            ];
+
+            if (!$txHashId) {
+                $updateOrder['option2'] = "No Transaction Has Received" ?? null;
+            }
+            $updateOrder['status'] = ($txHashId) ? 'pending' : 'failed';
             
+            $report->update($updateOrder);
+
+            Log::info("Report updated", [
+                'report_id' => $report->id,
+                'update' => $updateOrder
+            ]);
+            /// Return clean JSON response
+            return response()->json([
+                'status_code' => 200,
+                'status'      => "success",
+                'data'        => $filteredData
+            ], 200);
         }
 
     }

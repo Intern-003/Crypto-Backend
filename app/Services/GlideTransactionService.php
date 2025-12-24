@@ -138,69 +138,76 @@ class GlideTransactionService
     {
         $p = $data['payload'];
 
+        $mapField = function ($value) {
+            if (is_array($value) || is_object($value)) {
+                return json_encode($value);
+            }
+            return $value;
+        };
+
         return [
-            'webhook_id' => $data['webhookId'] ?? null,
-            'entity_id' => $data['entityId'] ?? null,
-            'session_id' => $p['sessionId'] ?? null,
+            'webhook_id' => $mapField($data['webhookId'] ?? null),
+            'entity_id' => $mapField($data['entityId'] ?? null),
+            'session_id' => $mapField($p['sessionId'] ?? null),
 
-            'created_at_utc' => $p['createdAt'] ?? null,
-            'expires_at_utc' => $p['expiresAt'] ?? null,
-            'expired' => $p['expired'] ?? false,
+            'created_at_utc' => $mapField($p['createdAt'] ?? null),
+            'expires_at_utc' => $mapField($p['expiresAt'] ?? null),
+            'expired' => $mapField($p['expired'] ?? false),
 
-            'payment_status' => $p['paymentStatus'] ?? null,
-            'payment_chain_id' => $p['paymentChainId'] ?? null,
-            'payment_currency' => $p['paymentCurrency'] ?? null,
-            'payment_currency_symbol' => $p['paymentCurrencySymbol'] ?? null,
-            'payment_currency_tier' => $p['paymentCurrencyTier'] ?? null,
+            'payment_status' => $mapField($p['paymentStatus'] ?? null),
+            'payment_chain_id' => $mapField($p['paymentChainId'] ?? null),
+            'payment_currency' => $mapField($p['paymentCurrency'] ?? null),
+            'payment_currency_symbol' => $mapField($p['paymentCurrencySymbol'] ?? null),
+            'payment_currency_tier' => $mapField($p['paymentCurrencyTier'] ?? null),
 
-            'payment_amount' => $p['paymentAmount'] ?? null,
-            'payment_amount_usd' => $p['paymentAmountUSD'] ?? null,
+            'payment_amount' => $mapField($p['paymentAmount'] ?? null),
+            'payment_amount_usd' => $mapField($p['paymentAmountUSD'] ?? null),
 
-            'payer_account' => $p['payerAccount'] ?? null,
-            'payer_wallet_address' => $p['payerWalletAddress'] ?? null,
-            'payer_email' => $p['payerEmail'] ?? null,
-            'enable_refund_emails' => $p['enableRefundEmails'] ?? false,
+            'payer_account' => $mapField($p['payerAccount'] ?? null),
+            'payer_wallet_address' => $mapField($p['payerWalletAddress'] ?? null),
+            'payer_email' => $mapField($p['payerEmail'] ?? null),
+            'enable_refund_emails' => $mapField($p['enableRefundEmails'] ?? false),
 
-            'payment_action' => $p['paymentAction'] ?? null,
-            'payment_tx_hash' => $p['paymentTransactionHash'] ?? null,
-            'payment_tx_url' => $p['paymentTransactionUrl'] ?? null,
+            'payment_action' => $mapField($p['paymentAction'] ?? null),
+            'payment_tx_hash' => $mapField($p['paymentTransactionHash'] ?? null),
+            'payment_tx_url' => $mapField($p['paymentTransactionUrl'] ?? null),
 
-            'unsigned_tx_chainid' => $p['unsignedTransaction']['chainId'] ?? null,
-            'unsigned_tx_to' => $p['unsignedTransaction']['to'] ?? null,
-            'unsigned_tx_value' => $p['unsignedTransaction']['value'] ?? null,
+            'unsigned_tx_chainid' => $mapField($p['unsignedTypedData']['domain'] ?? null),
+            'unsigned_tx_to' => $mapField($p['unsignedTypedData']['message'] ?? null),
+            'unsigned_tx_value' => $mapField($p['unsignedTypedData']['types'] ?? null),
 
-            'sponsored_tx_chainid' => $p['sponsoredTransactionChainId'] ?? null,
-            'sponsored_tx_status' => $p['sponsoredTransactionStatus'] ?? null,
-            'sponsored_tx_hash' => $p['sponsoredTransactionHash'] ?? null,
-            'sponsored_tx_url' => $p['sponsoredTransactionUrl'] ?? null,
-            'sponsored_tx_raw' => $p['sponsoredTransaction'] ?? null,
+            'sponsored_tx_chainid' => $mapField($p['sponsoredTransactionChainId'] ?? null),
+            'sponsored_tx_status' => $mapField($p['sponsoredTransactionStatus'] ?? null),
+            'sponsored_tx_hash' => $mapField($p['sponsoredTransactionHash'] ?? null),
+            'sponsored_tx_url' => $mapField($p['sponsoredTransactionUrl'] ?? null),
+            'sponsored_tx_raw' => $mapField($p['sponsoredTransaction'] ?? null),
 
-            'sponsored_tx_amount' => $p['sponsoredTransactionAmount'] ?? null,
-            'sponsored_tx_currency' => $p['sponsoredTransactionCurrency'] ?? null,
-            'sponsored_tx_currency_symbol' => $p['sponsoredTransactionCurrencySymbol'] ?? null,
-            'sponsored_tx_amount_usd' => $p['sponsoredTransactionAmountUSD'] ?? null,
+            'sponsored_tx_amount' => $mapField($p['sponsoredTransactionAmount'] ?? null),
+            'sponsored_tx_currency' => $mapField($p['sponsoredTransactionCurrency'] ?? null),
+            'sponsored_tx_currency_symbol' => $mapField($p['sponsoredTransactionCurrencySymbol'] ?? null),
+            'sponsored_tx_amount_usd' => $mapField($p['sponsoredTransactionAmountUSD'] ?? null),
 
-            'gas_refuel_amount' => $p['gasRefuelAmount'] ?? null,
-            'gas_refuel_amount_usd' => $p['gasRefuelUSD'] ?? null,
-            'gas_refuel_tx_status' => $p['gasRefuelTransactionStatus'] ?? null,
-            'gas_refuel_tx_hash' => $p['gasRefuelTransactionHash'] ?? null,
-            'gas_refuel_tx_url' => $p['gasRefuelTransactionUrl'] ?? null,
+            'gas_refuel_amount' => $mapField($p['gasRefuelAmount'] ?? null),
+            'gas_refuel_amount_usd' => $mapField($p['gasRefuelUSD'] ?? null),
+            'gas_refuel_tx_status' => $mapField($p['gasRefuelTransactionStatus'] ?? null),
+            'gas_refuel_tx_hash' => $mapField($p['gasRefuelTransactionHash'] ?? null),
+            'gas_refuel_tx_url' => $mapField($p['gasRefuelTransactionUrl'] ?? null),
 
-            'gas_fee_usd' => $p['gasFeeUSD'] ?? null,
-            'service_fee_usd' => $p['serviceFeeUSD'] ?? null,
-            'total_fee_usd' => $p['totalFeeUSD'] ?? null,
+            'gas_fee_usd' => $mapField($p['gasFeeUSD'] ?? null),
+            'service_fee_usd' => $mapField($p['serviceFeeUSD'] ?? null),
+            'total_fee_usd' => $mapField($p['totalFeeUSD'] ?? null),
 
-            'eta_seconds' => $p['etaInSeconds'] ?? null,
-            'metadata' => $p['metadata'] ?? null,
-            'allow_arbitrary_deposit' => $p['allowArbitraryDeposit'] ?? false,
+            'eta_seconds' => $mapField($p['etaInSeconds'] ?? null),
+            'metadata' => $mapField($p['metadata'] ?? null),
+            'allow_arbitrary_deposit' => $mapField($p['allowArbitraryDeposit'] ?? false),
 
-            'actual_payment_chain_id' => $p['actualPaymentChainId'] ?? null,
-            'actual_payment_currency' => $p['actualPaymentCurrency'] ?? null,
-            'actual_payment_currency_symbol' => $p['actualPaymentCurrencySymbol'] ?? null,
-            'actual_payment_currency_tier' => $p['actualPaymentCurrencyTier'] ?? null,
+            'actual_payment_chain_id' => $mapField($p['actualPaymentChainId'] ?? null),
+            'actual_payment_currency' => $mapField($p['actualPaymentCurrency'] ?? null),
+            'actual_payment_currency_symbol' => $mapField($p['actualPaymentCurrencySymbol'] ?? null),
+            'actual_payment_currency_tier' => $mapField($p['actualPaymentCurrencyTier'] ?? null),
 
-            'actual_payment_amount' => $p['actualPaymentAmount'] ?? null,
-            'actual_payment_amount_usd' => $p['actualPaymentAmountUSD'] ?? null
+            'actual_payment_amount' => $mapField($p['actualPaymentAmount'] ?? null),
+            'actual_payment_amount_usd' => $mapField($p['actualPaymentAmountUSD'] ?? null)
         ];
     }
 }
