@@ -16,6 +16,7 @@ use App\Models\AuthToken;
 use App\Models\Report;
 use Validator;
 use Illuminate\Support\Facades\Log;
+use App\Helpers\CryptoHelper;
 
 class GlidePayOutController extends Controller
 {
@@ -121,6 +122,7 @@ class GlidePayOutController extends Controller
 
         // 1️⃣ Hard fail if nothing returned
         if (empty($sessionData) || !is_array($sessionData)) {
+            DB::rollBack();
             return response()->json([
                 'status'     => 'failed',
                 'statuscode' => 500,
@@ -131,6 +133,7 @@ class GlidePayOutController extends Controller
         //dd($sessionData);
         // Extract only required fields
         if(!$sessionData || $sessionData === null) {
+            DB::rollBack();
             return response()->json([
                 'status'     => 'failed',
                 'statuscode' => 500,
@@ -139,6 +142,7 @@ class GlidePayOutController extends Controller
         } else {
             // 2️⃣ Validate required fields from Node API
             if (!array_key_exists('sessionId', $sessionData)) {
+                DB::rollBack();
                 return response()->json([
                     'status'     => 'failed',
                     'statuscode' => 502, // Bad gateway (upstream error)
@@ -153,10 +157,12 @@ class GlidePayOutController extends Controller
             $txHashId  = $sessionData['sponsoredTransactionHash'] ?? null;
 
             if (!$sessionId) {
+                DB::rollBack();
                 Log::warning('sessionId missing in Glide response', ['response' => $request->getContent()]);
                 return response()->json(['status' => false, 'message' => 'Session ID missing']);
             }
             if (!$txHashId || $txHashId === null) {
+                DB::rollBack();
                 Log::warning('transactionId missing in Glide response', ['response' => $request->getContent()]);
                 return response()->json(['status' => false, 'message' => 'Transaction ID missing']);
             }
@@ -188,6 +194,8 @@ class GlidePayOutController extends Controller
                 'report_id' => $report->id,
                 'update' => $updateOrder
             ]);
+
+            DB::commit();
             /// Return clean JSON response
             return response()->json([
                 'status_code' => 200,
@@ -199,7 +207,7 @@ class GlidePayOutController extends Controller
     }
 
     public function numberFormat($amount) {
-        return number_format($amount, 20, '.', '');
+        return number_format($amount, env('GLIDE_DIGIT_PRECISION', 8), '.', '');
     }
 
     public function convertAmount(string $from, string $to, ?float $amount = null)
@@ -273,7 +281,7 @@ class GlidePayOutController extends Controller
             } elseif ($payoutAmount > 700 && $payoutAmount <= 1000000) {
                 $payoutCommissionType   = $schemeInfo->payout_commision_type_above;
                 $payoutCommissionAmount = $schemeInfo->payout_commision_amount_above;
-                $calculatedCommission = ($payoutAmount * $payoutCommissionAmount) / 100;
+                $calculatedCommission = CryptoHelper::calculateCommission($payoutAmount, $payoutCommissionAmount, env('GLIDE_DIGIT_PRECISION', 8));
             } else {
                 return response()->json([
                     'status' => 'failed',
@@ -285,7 +293,9 @@ class GlidePayOutController extends Controller
             // -----------------
             // GST on commission
             // -----------------
-            $gst = ($calculatedCommission * 18) / 100;
+            //$gst = ($calculatedCommission * 18) / 100;
+            // GST on commission
+            $gst = CryptoHelper::calculateGST($calculatedCommission, env('GST_FOR_GLIDE', 18), env('GLIDE_DIGIT_PRECISION', 8));
             // ------------------
             // Final Calculations
             // ------------------
@@ -331,12 +341,12 @@ class GlidePayOutController extends Controller
                 "payout_opening_balance" => "$openingbalance",
                 "payout_closing_balance" => "$closingBalance",
                 "transaction_type"  => "Debit",
-                "status"            => "pending",
+                "status"            => "initiated",
                 "product"           => "payout",
                 "description"       => "Debit ₹{$mainAmount} to Payout Wallet",
                 "remark"            => "Payout pending",
                 "payment_platform"  => "api",
-                "payer_name"        => $request->buyer_name,
+                //"payer_name"        => $request->buyer_name,
                 "payer_email"       => $request->buyer_email,
                 "payer_mobile"      => $request->buyer_phone
             ];

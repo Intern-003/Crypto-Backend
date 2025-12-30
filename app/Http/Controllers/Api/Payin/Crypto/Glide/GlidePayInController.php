@@ -36,7 +36,8 @@ class GlidePayInController extends Controller
         $metadata = [
             'orderId' => $params["orderid"],
             'userId'  => $params["user_id"],
-            'token'   => $params["token"]
+            'token'   => $params["token"],
+            'product' => "CRYPTO"
         ];
         
         $metaTokenHash = $this->service->processMetaData('encrypt', $metadata);
@@ -61,18 +62,6 @@ class GlidePayInController extends Controller
         if ($response->successful()) {
          
             try {
-                // DB::table('glide_sessions')->insert([
-                //     'glide_request' => json_encode([
-                //         'mode' => 'pay',
-                //         'amount' => $params["amount"],
-                //         'metadata' => $metaToken,
-                //     ]),
-                //     'glide_response' => $response->body(),
-                //     'stages' => 'Glide-Session-Initialization',
-                //     'created_at' => now(),
-                //     'updated_at' => now(),
-                // ]);
-
                 Log::info('Glide-Session-Initialization', [
                     'glide_request' => json_encode([
                         'mode' => 'pay',
@@ -190,14 +179,6 @@ class GlidePayInController extends Controller
         $convertedAmount = $this->numberFormat($this->convertAmount('INR', 'USD', $request->amount));
         
         // Prepare payload
-        // $payload = [
-        //     'orderid'     => $request->orderid,
-        //     'amount'      => $convertedAmount,//$request->amount,
-        //     'buyer_email' => $request->buyer_email,
-        //     'buyer_phone' => $request->buyer_phone,
-        //     'merchant_info' => json_encode($user),
-        // ];
-        
         $createWidgetPayload = [
             'orderid'   => $request->orderid,
             'amount'    => $convertedAmount,//$request->amount,
@@ -269,56 +250,19 @@ class GlidePayInController extends Controller
             ], 400);
         }
         
-        // // Commission Calculation
-        // $payinCommissionType   = $schemeInfo->payin_commision_type;
-        // $payinCommissionAmount = $schemeInfo->payin_commision_amount;
-                
-        // $calculatedCommission = 0;
-        // if ($payinCommissionType === 'percent') {
-        //     //$calculatedCommission = ($transactionAmount * $payinCommissionAmount) / 100;
-        //     $calculatedCommission = CryptoHelper::calculateCommission($transactionAmount, $payinCommissionAmount, 20);
-        // } elseif ($payinCommissionType === 'flat') {
-        //     $calculatedCommission = $payinCommissionAmount;
-        // }
-        // //$calculatedCommission = $this->numberFormat($calculatedCommission);
-
-        // // GST on commission
-        // $gst = CryptoHelper::calculateGST($calculatedCommission, env('GST_FOR_GLIDE', 18));
-        // //$gst = ($calculatedCommission * env('GST_FOR_GLIDE')) / 100;
-        
-        // // Rolling Charge
-        // $rollingPayinAmount = $schemeInfo->rolling_payin_amount;
-        // $rollingFixedAmount = $schemeInfo->rolling_fixed_amount;
-        
-        // $rollingCharge = 0;
-        // $rolling_amount = 0;
-
-        // if (!empty($rollingPayinAmount)) {
-        //     $rollingCharge = ($transactionAmount * $rollingPayinAmount) / 100;
-        //     $rolling_amount = $rollingCharge;
-        // } elseif (!empty($rollingFixedAmount)) {
-        //     $rollingCharge = 0;
-        //     $rolling_amount = $rollingFixedAmount;
-        // }
-                
-        // $totalCommissionWithGst = $calculatedCommission + $gst;
-        // $totalCommissionWithGst = $this->numberFormat($totalCommissionWithGst);
-        // $remainingAmount = $this->numberFormat($transactionAmount - ($totalCommissionWithGst + $rollingCharge));
-
         // Commission Calculation
         $payinCommissionType   = $schemeInfo->payin_commision_type;
         $payinCommissionAmount = $schemeInfo->payin_commision_amount;
                 
         $calculatedCommission = 0;
         if ($payinCommissionType === 'percent') {
-            //$calculatedCommission = ($transactionAmount * $payinCommissionAmount) / 100;
-            $calculatedCommission = CryptoHelper::calculateCommission($transactionAmount, $payinCommissionAmount, 20);
+            $calculatedCommission = CryptoHelper::calculateCommission($transactionAmount, $payinCommissionAmount, env('GLIDE_DIGIT_PRECISION', 8));
         } elseif ($payinCommissionType === 'flat') {
             $calculatedCommission = $payinCommissionAmount;
         }
         
         // GST on commission
-        $gst = CryptoHelper::calculateGST($calculatedCommission, env('GST_FOR_GLIDE', 18));
+        $gst = CryptoHelper::calculateGST($calculatedCommission, env('GST_FOR_GLIDE', 18), env('GLIDE_DIGIT_PRECISION', 8));
         //$gst = ($calculatedCommission * env('GST_FOR_GLIDE')) / 100;
         
         // Rolling Charge
@@ -329,7 +273,7 @@ class GlidePayInController extends Controller
         $rolling_amount = 0;
 
         if (!empty($rollingPayinAmount)) {
-            $rollingCharge = CryptoHelper::calculateCommission($transactionAmount, $rollingPayinAmount, 20);
+            $rollingCharge = CryptoHelper::calculateCommission($transactionAmount, $rollingPayinAmount, env('GLIDE_DIGIT_PRECISION', 8));
             $rolling_amount = $rollingCharge;
         } elseif (!empty($rollingFixedAmount)) {
             $rollingCharge = 0;
@@ -337,11 +281,7 @@ class GlidePayInController extends Controller
         }
                 
         $totalCommissionWithGst = $calculatedCommission + $gst;
-        //$totalCommissionWithGst = $this->numberFormat($totalCommissionWithGst);
-        //$remainingAmount = $this->numberFormat($transactionAmount - ($totalCommissionWithGst + $rollingCharge));
         $remainingAmount = $transactionAmount - ($totalCommissionWithGst + $rollingCharge);
-        
-        
         $orderId = 'SPAY-GLIDE-' . now()->format('YmdHis') . rand(11111111, 99999999);
         
         $data = [
@@ -371,7 +311,7 @@ class GlidePayInController extends Controller
     }
 
     public function numberFormat($amount) {
-        return number_format($amount, 20, '.', '');
+        return number_format($amount, env('GLIDE_DIGIT_PRECISION', 8), '.', '');
     }
 
     public function convertAmount(string $from, string $to, ?float $amount = null)

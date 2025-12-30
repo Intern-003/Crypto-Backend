@@ -322,7 +322,7 @@ class ReportController extends Controller
             ->orderBy(DB::raw("DATE_FORMAT(created_at, '%Y-%m')"), 'asc')
             ->get();
 
-    
+            //dd($user);
             // -------------------------------
             // Response
             // -------------------------------
@@ -369,7 +369,7 @@ class ReportController extends Controller
     }
 
     public function numberFormat($amount) {
-        return number_format($amount, 20, '.', '');
+        return number_format($amount, env('GLIDE_DIGIT_PRECISION', 8), '.', '');
     }
 
     // new MerchantCollection without CRYPTO

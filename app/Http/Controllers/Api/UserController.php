@@ -43,7 +43,7 @@ public function getMerchants(Request $request)
     // Fetch total charges grouped by user_id and product
     $charges = DB::table('reports')
         ->select('user_id', 'product', DB::raw('SUM(charge) as total_charge'), DB::raw('SUM(amount) as total_amount'))
-        ->whereIn('product', ['UPI', 'payout', 'CRYPTO'])
+        ->whereIn('product', ['payout', 'CRYPTO'])
         ->where('status', 'success')
         ->groupBy('user_id', 'product')
         ->get();
@@ -52,28 +52,28 @@ public function getMerchants(Request $request)
     $merchants = $merchants->map(function($merchant) use ($charges) {
         $userCharges = $charges->where('user_id', $merchant->id);
 
-        $upiCharge = $userCharges->where('product', 'UPI')->first()->total_charge ?? 0;
+        //$upiCharge = $userCharges->where('product', 'UPI')->first()->total_charge ?? 0;
         $payoutCharge = $userCharges->where('product', 'payout')->first()->total_charge ?? 0;
         $cryptoCharge = $userCharges->where('product', 'CRYPTO')->first()->total_charge ?? 0;
 
-        $upiAmount = $userCharges->where('product', 'UPI')->first()->total_amount ?? 0;
+        //$upiAmount = $userCharges->where('product', 'UPI')->first()->total_amount ?? 0;
         $payoutAmount = $userCharges->where('product', 'payout')->first()->total_amount ?? 0;
         $cryptoAmount = $userCharges->where('product', 'CRYPTO')->first()->total_amount ?? 0;
 
         $merchant->total_charge = [
-            'UPI'    => $upiCharge,
+            //'UPI'    => $upiCharge,
             'payout' => $payoutCharge,
             'CRYPTO' => $cryptoCharge,
         ];
 
         $merchant->total_amount = [
-            'UPI'    => $upiAmount,
+            //'UPI'    => $upiAmount,
             'payout' => $payoutAmount,
             'CRYPTO' => $cryptoAmount,
         ];
 
         // Add total payout (sum of all charges or amounts as needed)
-        $merchant->total_payout = $upiAmount + $payoutAmount + $cryptoAmount; // or sum amounts if needed: $upiAmount + $payoutAmount + $cryptoAmount
+        $merchant->total_payout = $payoutAmount + $cryptoAmount; // or sum amounts if needed: $upiAmount + $payoutAmount + $cryptoAmount
 
         return $merchant;
     });

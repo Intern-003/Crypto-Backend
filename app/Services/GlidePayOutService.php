@@ -40,7 +40,8 @@ class GlidePayOutService
         $metadata = [
             'orderId' => $params['orderid'],
             'userId'  => $params['user_id'],
-            'token'   => $params['token']
+            'token'   => $params['token'],
+            'product' => "payout"  
         ];
 
         // Optional: encrypt metadata if you have a service

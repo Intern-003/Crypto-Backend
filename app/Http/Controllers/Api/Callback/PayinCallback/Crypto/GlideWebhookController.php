@@ -16,39 +16,80 @@ use App\Models\Report;
 class GlideWebhookController extends Controller
 {
     protected $service;
+    //protected $logPath;
 
     public function __construct(GlideTransactionService $service)
     {
         $this->service = $service;
     }
 
-    /**
-     * Send callback to merchant.
-     */
-     private function payinLog($message, $data = []){
+    private function webhookLog($message, $data = []){
          
-         $log_path = storage_path('callback/payin');
+        $log_path = storage_path('callback/webhook-general');
          
-         if(!file_exists($log_path)){
-             mkdir($log_path, 0777,true);
-         }
-         $file = $log_path . '/' . date('Y-m-d') . 'log';
+        if(!file_exists($log_path)){
+            mkdir($log_path, 0777,true);
+        }
+
+        $file = $log_path . '/' . date('Y-m-d') . 'log';
          
-         $text = ' [ '. date('Y-m-d H:i:s') . ' ] '. " : " . $message;
+        $text = ' [ '. date('Y-m-d H:i:s') . ' ] '. " : " . $message;
          
-         if(!empty($data)){
-             $text .= " " .json_encode($data);
-         }
-         $text .= "\n\n";
-         file_put_contents($file, $text, FILE_APPEND);
+        if(!empty($data)){
+            $text .= " " .json_encode($data);
+        }
+        
+        $text .= "\n\n";
+        file_put_contents($file, $text, FILE_APPEND);
+    }
+
+    private function payinLog($message, $data = []){
          
+        $log_path = storage_path('callback/payin');
          
-     }
+        if(!file_exists($log_path)){
+            mkdir($log_path, 0777,true);
+        }
+
+        $file = $log_path . '/' . date('Y-m-d') . 'log';
+         
+        $text = ' [ '. date('Y-m-d H:i:s') . ' ] '. " : " . $message;
+         
+        if(!empty($data)){
+            $text .= " " .json_encode($data);
+        }
+        
+        $text .= "\n\n";
+        file_put_contents($file, $text, FILE_APPEND);
+    }
+
+    
+    private function payoutLog($message, $data = [])
+    {
+        $log_path = storage_path('callback/payout');
+
+        // Create directory if not exists
+        if (!file_exists($log_path)) {
+            mkdir($log_path, 0777, true);
+        }
+
+        // File name by date
+        $file = $log_path . '/' . date('Y-m-d') . '.log';
+
+        // Format log
+        $text = "[" . date('Y-m-d H:i:s') . "] " . $message;
+        if (!empty($data)) {
+            $text .= " " . json_encode($data);
+        }
+        $text .= "\n";
+
+        file_put_contents($file, $text, FILE_APPEND);
+    }
 
     //public function handleGlideWebhook(StoreGlideWebhookRequest $request)
     public function handleGlideWebhook(Request $request)
     {
-        $this->payinLog('Glide Callback Received', [
+        $this->webhookLog('Glide Callback Received', [
             'request_array' => $request->all(),
             'raw_content' => $request->getContent()
         ]);
@@ -64,21 +105,54 @@ class GlideWebhookController extends Controller
         $data = json_decode($request->getContent(), true);
         
         if (!$data) {
-            $this->payinLog('Failed to decode Glide Webhook response', ['input' => $request->getContent()]);
+            $this->webhookLog('Failed to decode Glide Webhook response', ['input' => $request->getContent()]);
             return response()->json(['status' => false, 'message' => 'Invalid response']);
         } else {
             $webHookType = $data['type'];
             $metaDataId = $data['payload']['metadata'] ?? null;
             $webhookId = $data['webhookId'] ?? null;
             if (!$metaDataId) {
-                $this->payinLog('metadata id missing in Glide sessions', ['response' => $data]);
+                $this->webhookLog('metadata id missing in Glide sessions', ['response' => $data]);
                 return response()->json(['status' => false, 'message' => 'Metadata missing']);
             } else {
+                $decryptedMetaData = $this->service->processMetaData('decrypt', $metaDataId);
+                $webhookFor = $decryptedMetaData["product"] ?? null;
+
+                if($webhookFor !== null)
+                {
+                    // Determine which log method to call
+                    $logMethod = match ($webhookFor) {
+                        "CRYPTO" => "payinLog",
+                        "payout" => "payoutLog",
+                        default => "webhookLog",
+                    };
+                    
+                    // Call the method dynamically
+                    $this->{$logMethod}('Glide Callback Received', [
+                        'request_array' => $request->all(),
+                        'raw_content' => $request->getContent(),
+                    ]);
+                } 
+
                 $glideStage1Status  = $data['payload']['paymentStatus'] ?? null;
                 $glideStage1Txn     = $data['payload']['paymentTransactionHash'] ?? null;
                 
                 $glideStage2Status  = $data['payload']['sponsoredTransactionStatus'] ?? null;
                 $glideStage2Txn     = $data['payload']['sponsoredTransactionHash'] ?? null;
+
+                $shortMetaId = $this->service->getShortMeta($metaDataId);
+
+                // Determine which log method to call
+                $reportProuct = match ($webhookFor) {
+                    "CRYPTO" => "CRYPTO",
+                    "payout" => "payout",
+                    default => "CRYPTO",
+                };
+
+                $report = Report::where('apitxnid', $shortMetaId)
+                                ->where('status', 'pending')
+                                ->where('product', $reportProuct)
+                                ->first();
                 
                 if($glideStage1Status === 'paid' && $glideStage2Status === "success") {
                     // $metaDataHash = DB::table('glide_sessions')
@@ -92,15 +166,18 @@ class GlideWebhookController extends Controller
                     // } else {
                         //$metaDataIdParam = $metaDataHash->glide_request;
                         
-                        $decryptedMetaData = $this->service->processMetaData('decrypt', $metaDataId); //$this->service->decryptEncryptedToken($metaDataIdParam);
-                        $shortMetaId = $this->service->getShortMeta($metaDataId);
+                        //$decryptedMetaData = $this->service->processMetaData('decrypt', $metaDataId); //$this->service->decryptEncryptedToken($metaDataIdParam);
                         
-                        $report = Report::where('apitxnid', $shortMetaId)
-                                        ->where('status', 'pending')
-                                        ->where('product', 'CRYPTO')
-                                        ->first();
+                        //$shortMetaId = $this->service->getShortMeta($metaDataId);
+                        
+                        // $report = Report::where('apitxnid', $shortMetaId)
+                        //                 ->where('status', 'pending')
+                        //                 ->where('product', 'CRYPTO')
+                        //                 ->first();
+
                         if (!$report) {
-                            $this->payinLog('No report found for metadata_id', ['metadataid' => $metaDataId]);
+                            // Call the method dynamically
+                            $this->{$logMethod}('No report found for metadata_id', ['metadataid' => $shortMetaId]);
                             return response()->json(['status' => false, 'message' => 'Report not found']);
                         }
                         $user = User::find($report->user_id);
@@ -109,23 +186,34 @@ class GlideWebhookController extends Controller
                             $timestamp = $data['payload']['createdAt'] ?? null;
                         
                             // Prepare report update
-                            $updateOrder = [
-                                'option2' => $data['type'] ?? null,
-                                'option3' => $glideStage2Txn ?? null,
-                            ];
+                            if($webhookFor == "CRYPTO")
+                            {
+                                $updateOrder = [
+                                    'option2' => $data['type'] ?? null,
+                                    'option3' => $glideStage2Txn ?? null,
+                                ];
+                            } else if($webhookFor == "payout")
+                            {
+                                $updateOrder = [
+                                    'option4' => $glideStage2Txn ?? null,
+                                ];
+                            }
+                            
                         
                             $updateOrder['status'] = $glideStage1Status === 'paid' && $glideStage2Status === "success" ? 'success' : ($glideStage1Status === 'unpaid' ? 'failed' : $report->status);
                             
                             $report->update($updateOrder);
                         
-                            $this->payinLog("Report updated", [
+                            // Call the method dynamically
+                            $this->{$logMethod}("Report updated", [
                                 'report_id' => $report->id,
                                 'update' => $updateOrder
                             ]);
                         
                             $tx = $this->service->handleWebhook($request->all());
                             
-                            $this->payinLog('Glide callback processing finished',[
+                            // Call the method dynamically
+                            $this->{$logMethod}('Glide callback processing finished',[
                                 'success' => true,
                                 'transaction_id' => $tx->id
                             ]);
@@ -135,7 +223,7 @@ class GlideWebhookController extends Controller
                                 'transaction_id' => $tx->id
                             ]);
                         } else {
-                            $this->payinLog('Userid missmatched in Glide response', ['response' => $data]);
+                            $this->{$logMethod}('Userid missmatched in Glide response', ['response' => $data]);
                             return response()->json(['status' => false, 'message' => 'USER ID missing']);
                         }
                     //}    
